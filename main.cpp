@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QDir>
 #include <JlCompress.h>
+#include <QThread>
 
 /// 下载网络文件
 /// 会覆盖现有的文件
@@ -66,7 +67,17 @@ void actionUnzip(QString file, QString dir, QStringList args)
         return ;
     }
 
-    // 创建目录
+    // 延迟解压，等待x秒
+    if (args.contains("-1"))
+        QThread::sleep(1);
+    if (args.contains("-2"))
+        QThread::sleep(2);
+    if (args.contains("-4"))
+        QThread::sleep(4);
+    if (args.contains("-8"))
+        QThread::sleep(8);
+
+    // 确保目录存在
     QDir().mkpath(dir);
 
     // 开始解压
@@ -92,8 +103,18 @@ void actionZip(QString file, QString dir)
 }
 
 /// 重命名文件（强制覆盖）
-void actionRename(QString oldFile, QString newFile)
+void actionRename(QString oldFile, QString newFile, QStringList args)
 {
+    // 延迟解压，等待x秒
+    if (args.contains("-1"))
+        QThread::sleep(1);
+    if (args.contains("-2"))
+        QThread::sleep(2);
+    if (args.contains("-4"))
+        QThread::sleep(4);
+    if (args.contains("-8"))
+        QThread::sleep(8);
+
     // 删除现有文件
     if (QFileInfo(newFile).exists())
         QFile(newFile).remove();
@@ -196,7 +217,10 @@ int main(int argc, char *argv[])
             return -1;
         }
 
-        actionRename(args[0], args[1]);
+        auto sl = args;
+        sl.removeFirst();
+        sl.removeFirst();
+        actionRename(args[0], args[1], sl);
     }
 
     return 0;
