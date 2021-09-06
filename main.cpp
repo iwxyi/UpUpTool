@@ -9,6 +9,7 @@
 #include <JlCompress.h>
 
 /// 下载网络文件
+/// 会覆盖现有的文件
 QByteArray downloadWebFile(QString uri)
 {
     QUrl url(uri);
@@ -21,7 +22,7 @@ QByteArray downloadWebFile(QString uri)
     QObject::connect(reply, SIGNAL(finished()), &loop, SLOT(quit())); //请求结束并下载完成后，退出子事件循环
     loop.exec(); //开启子事件循环
 
-    return reply->readAll().data();
+    return reply->readAll();
 }
 
 /// 下载更新的安装包
@@ -29,6 +30,7 @@ void actionDownload(QString url, QString filePath)
 {
     // 判断路径
     QDir().mkpath(QFileInfo(filePath).absolutePath());
+
     QFile file(filePath);
     if (!file.open(QFile::WriteOnly))
     {
@@ -38,6 +40,7 @@ void actionDownload(QString url, QString filePath)
 
     // 下载文件
     QByteArray ba = downloadWebFile(url);
+    qInfo() << "file.size:" << ba.size();
 
     // 写入文件
     file.write(ba);
