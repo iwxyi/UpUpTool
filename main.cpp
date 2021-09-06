@@ -57,7 +57,7 @@ void actionOpen(QString program, QStringList args)
 }
 
 /// 解压文件并覆盖（强制覆盖）
-void actionUnzip(QString file, QString dir)
+void actionUnzip(QString file, QString dir, QStringList args)
 {
     // 确保待解压文件存在
     if (!QFileInfo(file).exists())
@@ -71,6 +71,13 @@ void actionUnzip(QString file, QString dir)
 
     // 开始解压
     JlCompress::extractDir(file, dir);
+
+    // 其他参数
+    if (args.contains("-d"))
+    {
+        // 删除压缩包
+        QFile(file).remove();
+    }
 }
 
 /// 压缩文件（强制覆盖）
@@ -82,6 +89,17 @@ void actionZip(QString file, QString dir)
 
     // 开始压缩
     JlCompress::compressDir(file, dir);
+}
+
+/// 重命名文件（强制覆盖）
+void actionRename(QString oldFile, QString newFile)
+{
+    // 删除现有文件
+    if (QFileInfo(newFile).exists())
+        QFile(newFile).remove();
+
+    QFile file(oldFile);
+    file.rename(newFile);
 }
 
 int main(int argc, char *argv[])
@@ -120,7 +138,7 @@ int main(int argc, char *argv[])
     {
         qInfo() << "-d url path       : download net file";
         qInfo() << "-o program [args] : open installation package";
-        qInfo() << "-u file dir       : unzip file to dir";
+        qInfo() << "-u file dir       : unzip file to dir, append '-d' to remove zip file after the end";
         qInfo() << "-z dir file       : zip one dir to one file";
         return 0;
     }
@@ -155,7 +173,10 @@ int main(int argc, char *argv[])
             return -1;
         }
 
-        actionUnzip(args[0], args[1]);
+        auto sl = args;
+        sl.removeFirst();
+        sl.removeFirst();
+        actionUnzip(args[0], args[1], sl);
     }
     else if (is("zip"))
     {
@@ -166,6 +187,16 @@ int main(int argc, char *argv[])
         }
 
         actionZip(args[0], args[1]);
+    }
+    else if (is("rename"))
+    {
+        if (argc < 2)
+        {
+            qCritical() << "need least 3 args: -r oldPath newPath";
+            return -1;
+        }
+
+        actionRename(args[0], args[1]);
     }
 
     return 0;
