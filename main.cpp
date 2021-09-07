@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
     QStringList args;
-    if (argc <= 2)
+    if (argc < 2)
     {
         qCritical() << "need open by console with at least 2 args\ninput -h to get help";
         return -1;
