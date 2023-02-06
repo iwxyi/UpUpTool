@@ -35,7 +35,7 @@ QProcess.startDetached("UpUpTool.exe", { "-d", url, pkgPath});
 QString appPath = QApplication::applicationDirPath(); // 程序安装路径
 QString pkgPath = appPath + "/update.zip"; // 新安装包路径，与下载的位置一致
 QProcess process;
-process.startDetached("UpUpTool.exe", { "-u", pkgPath, appPath, "-d", "-4" } );
+process.startDetached("UpUpTool.exe", { "-u", pkgPath, appPath, "-4" } );
 ```
 
 如果不是绿色版，下载的是 exe 而非 zip，直接打开 exe 让用户进行安装。

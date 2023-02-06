@@ -34,7 +34,7 @@ void myMsgOutput(QtMsgType type, const QMessageLogContext &context, const QStrin
         mmsg=QString("%1: Fatal:\t%2 (file:%3, line:%4, func: %5)").arg(time).arg(msg).arg(QString(context.file)).arg(context.line).arg(QString(context.function));
         abort();
     }
-    QFile file("update_history.log");
+    QFile file("update_tool.log");
     file.open(QIODevice::ReadWrite | QIODevice::Append);
     QTextStream stream(&file);
     stream << mmsg << "\r\n";
@@ -61,8 +61,33 @@ bool deleteDir(const QString &path)
         else
             deleteDir(fi.absoluteFilePath());
     }
-    return dir.rmpath(dir.absolutePath());
+    bool rst = dir.rmpath(dir.absolutePath());
+    if (!rst)
+        qWarning() << "delete dir failed:" << path;
+    return rst;
 }
+
+QByteArray getFileMd5(const QString &fileName)
+{
+    QFile file(fileName);
+    const bool isOpen = file.open(QIODevice::ReadOnly);
+    if (isOpen)//以只读形式打开文件
+    {
+        QCryptographicHash hash(QCryptographicHash::Md5);
+        while(!file.atEnd())
+        {
+            QByteArray data = file.read(100 * 1024 * 1024);// 100m  实际内容若不足只读实际大小
+            //QByteArray catalog = file.readAll(); // 小文件可以一直全读在内存中，大文件必须分批处理
+
+            hash.addData(data);
+        }
+        QByteArray md5 = hash.result();
+        file.close();//及时关闭
+        return md5;
+    }
+    return QByteArray();
+}
+
 
 bool copyDir(const QString &source, const QString &destination, bool override = false)
 {
@@ -92,7 +117,7 @@ bool copyDir(const QString &source, const QString &destination, bool override = 
         QFileInfo fileInfo(srcFilePath);
         if (fileInfo.isFile() || fileInfo.isSymLink())
         {
-            if (override)
+            if (override && fileInfo.exists())
             {
                 QFile::setPermissions(dstFilePath, QFile::WriteOwner);
                 if (QFileInfo(dstFilePath).exists())
@@ -101,9 +126,15 @@ bool copyDir(const QString &source, const QString &destination, bool override = 
                 }
             }
 
-            bool rst = QFile::copy(srcFilePath, dstFilePath);
-            Q_UNUSED(rst)
-            // qInfo() << "copy:" << rst << srcFilePath << dstFilePath;
+            if (!QFile::copy(srcFilePath, dstFilePath))
+            {
+                QByteArray md5_1 = getFileMd5(srcFilePath);
+                QByteArray md5_2 = getFileMd5(dstFilePath);
+                if (md5_1 == md5_2)
+                    qInfo() << "copy skip same file:" << dstFilePath << md5_1.toBase64();
+                else
+                    qWarning() << "copy failed:" << srcFilePath << "->" << dstFilePath;
+            }
         }
         else if (fileInfo.isDir())
         {
@@ -139,7 +170,7 @@ QByteArray downloadWebFile(QString uri)
 /// 下载更新的安装包
 void actionDownload(QString url, QString filePath)
 {
-    qInfo() << "download:" << url << filePath;
+    qInfo() << "download:" << url << "->" << filePath;
     // 判断路径
     QDir().mkpath(QFileInfo(filePath).absolutePath());
 
@@ -152,7 +183,7 @@ void actionDownload(QString url, QString filePath)
 
     // 下载文件
     QByteArray ba = downloadWebFile(url);
-    qInfo() << "file.size:" << ba.size();
+    qInfo() << "file.size:" << ba.size()/1024/1024 << "KB";
 
     // 写入文件
     file.write(ba);
@@ -200,7 +231,7 @@ void actionUnzip(QString file, QString dir, QStringList args)
     {
         foreach (auto path, result)
         {
-            qInfo() << "    " << path;
+            qInfo() << "      " << path;
         }
     }
     else
@@ -209,7 +240,7 @@ void actionUnzip(QString file, QString dir, QStringList args)
     }
 
     // 复制文件
-    qInfo() << "copy dir:" << tempDir << dir;
+    qInfo() << "copy dir:" << tempDir << "->" << dir;
     copyDir(tempDir, dir, true);
     deleteDir(tempDir);
 
@@ -261,12 +292,17 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
 
     // 输出
-    if (QFileInfo("update_history.log").exists())
+    //if (QFileInfo("update_tool.log").exists())
     {
         qInstallMessageHandler(myMsgOutput);
     }
 
     QStringList args;
+    if (argc == 0)
+    {
+        printf("See Document\n");
+        return 0;
+    }
     if (argc < 2)
     {
         qCritical() << "need open by console with at least 2 args\ninput -h to get help";
