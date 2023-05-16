@@ -183,7 +183,7 @@ void actionDownload(QString url, QString filePath)
 
     // 下载文件
     QByteArray ba = downloadWebFile(url);
-    qInfo() << "file.size:" << ba.size()/1024/1024 << "KB";
+    qInfo() << "file.size:" << ba.size()/1024 << "KB";
 
     // 写入文件
     file.write(ba);
